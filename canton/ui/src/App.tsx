@@ -192,9 +192,9 @@ export function App() {
 
       {/* ── Sui ownership: live Move-contract anchor ───────────────────────── */}
       <div className="panel">
-        <div className="ptitle">⚓ Sui ownership — anchor the blob behind a Move contract</div>
-        <div className="hint">Calls <span className="mono">health_anchor::anchor</span> live on Sui testnet → mints a patient-owned <span className="mono">HealthRecordAnchor</span> object. This is the “blob behind a smart contract” — more than an S3 bucket.</div>
-        <button className="btn big" onClick={anchorNow} disabled={anchorBusy || !blobInput.trim()}>{anchorBusy ? 'Anchoring on Sui…' : '⚓ Anchor this blob on Sui'}</button>
+        <div className="ptitle">⚓ Sui — own the blob on-chain</div>
+        <div className="hint">Anchors the Walrus blob in a Move contract → a patient-owned object on Sui.</div>
+        <button className="btn big" onClick={anchorNow} disabled={anchorBusy || !blobInput.trim()}>{anchorBusy ? 'Anchoring on Sui…' : '⚓ Anchor on Sui'}</button>
         {anchorSteps.length > 0 && <div className="steps">{anchorSteps.map((s, i) => <div className="step" key={i}>{s}</div>)}</div>}
         {anchorRes && (
           <div style={{ marginTop: 10 }}>
@@ -207,9 +207,9 @@ export function App() {
 
       {/* ── Walrus: fetch + decrypt (the storage/encryption layer, live) ───── */}
       <div className="panel">
-        <div className="ptitle">🔓 Walrus — fetch &amp; decrypt the encrypted summary</div>
-        <div className="hint">Pulls the blob from the public Walrus aggregator and decrypts it as the authorized insurer. What’s stored on Walrus is ciphertext — only the key opens it.</div>
-        <button className="btn big" onClick={demoDecrypt} disabled={demoBusy || !blobInput.trim()}>{demoBusy ? 'Working…' : '🔓 Fetch &amp; decrypt from Walrus'}</button>
+        <div className="ptitle">🔓 Walrus — decrypt the summary</div>
+        <div className="hint">Fetches the encrypted blob and opens it with the key — on Walrus it’s just ciphertext.</div>
+        <button className="btn big" onClick={demoDecrypt} disabled={demoBusy || !blobInput.trim()}>{demoBusy ? 'Working…' : '🔓 Fetch & decrypt'}</button>
         {demoSteps.length > 0 && <div className="steps">{demoSteps.map((s, i) => <div className="step" key={i}>{s}</div>)}</div>}
         {demoRead && <Decrypted s={demoRead} />}
       </div>
