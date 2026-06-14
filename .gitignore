@@ -32,3 +32,6 @@ yarn-error.*
 
 # Personal prep notes (local only)
 CHEATSHEET.md
+
+# Local sample data (not for repo)
+SAMPLE-HEALTH-DATA.txt
