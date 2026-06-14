@@ -1,0 +1,81 @@
+PulseVault — sample health data (what the Pulse app generates & stores)
+========================================================================
+
+This is the ~10-metric daily stream a consumer health app captures. The app
+encrypts the RAW daily data and stores it on Walrus for the user only. For an
+insurer it sends a CONSOLIDATED 30-day summary (averages + risk band), never
+the day-by-day rows. Both are shown below.
+
+------------------------------------------------------------------------
+PART 1 — RAW DAILY METRICS (30 days, encrypted on Walrus, user-only)
+------------------------------------------------------------------------
+      Date  Steps ActMin  RHR  HRV   VO2  SYS  DIA  SleepH   BMI  SpO2
+2026-05-15  10902     58   64   69  45.1  126   72     7.8  25.5  97.6
+2026-05-16   6884     51   61   68  43.7  116   70     7.9  23.8    98
+2026-05-17   9973     34   67   46  42.8  119   74     8.5    25  97.9
+2026-05-18   6035     20   65   75  44.6  124   72     6.8  23.4  97.3
+2026-05-19   9531     48   66   46  45.8  121   70     6.5  25.1  97.1
+2026-05-20   6930     26   64   57  44.2  122   71     6.7  25.1  97.3
+2026-05-21  11585     59   63   56    44  122   80     7.9  24.9  97.3
+2026-05-22   9925     47   59   46  40.3  124   82     8.0  24.7  96.9
+2026-05-23  11888     37   55   57  40.4  125   74     7.5  23.1  97.9
+2026-05-24   5766     22   58   65  39.5  110   71     7.7    25  97.9
+2026-05-25  10297     37   60   54  41.6  124   74     7.8  22.8  97.3
+2026-05-26   9208     50   62   48  40.3  113   70     6.4  24.4  96.9
+2026-05-27   6247     50   66   49  39.3  121   71     7.4  24.2  97.6
+2026-05-28   5807     46   62   54  45.3  128   76     7.4  23.3  96.7
+2026-05-29  10134     41   59   62  43.2  126   81     7.0  23.5  97.7
+2026-05-30  11862     14   56   71  43.1  119   71     8.5  24.3  97.9
+2026-05-31   8387     24   64   57  41.1  126   75     8.0  25.1  98.2
+2026-06-01   7014     22   65   71  45.3  110   80     6.4    24  96.9
+2026-06-02   6970     27   56   59  39.4  125   77     8.3  24.1  97.1
+2026-06-03   7933     17   63   48  42.9  119   80     6.8  25.6  97.6
+2026-06-04   7700     18   62   51  43.4  122   79     7.1    23  97.7
+2026-06-05   6754     20   66   54  43.9  124   81     6.8  25.7    98
+2026-06-06   8589     38   62   44  40.6  112   79     6.6  24.1    97
+2026-06-07  11528     48   59   48  40.4  119   81     6.4  24.9  97.6
+2026-06-08   5707     63   64   55  45.6  111   83     6.5  24.4  97.2
+2026-06-09  10876     60   63   49  43.4  111   83     7.8  25.2  97.3
+2026-06-10  10938     60   62   70  42.6  120   81     8.0  22.8    98
+2026-06-11   6549     24   55   54  41.1  113   77     7.2  25.5  96.7
+2026-06-12   6181     40   58   64  39.4  126   71     8.5  25.7    97
+2026-06-13  10925     37   66   51  44.6  114   70     8.2  23.7  97.3
+
+Legend: RHR=resting heart rate (bpm) · HRV=heart-rate variability (ms) ·
+VO2=VO2max (ml/kg/min) · SYS/DIA=blood pressure (mmHg) · SleepH=sleep (hours) ·
+BMI=body mass index · SpO2=blood oxygen (%)
+
+------------------------------------------------------------------------
+PART 2 — CONSOLIDATED 30-DAY SUMMARY (this is what the insurer receives)
+------------------------------------------------------------------------
+Window:                 2026-05-15 -> 2026-06-13  (30 days)
+Avg resting heart rate: 61.7 bpm
+Avg HRV:                56.6 ms
+Avg VO2max:             42.6 ml/kg/min
+Avg blood pressure:     119.7/75.9 mmHg
+Avg sleep:              7.4 h/night
+Avg daily steps:        8634
+Avg active minutes:     38 min/day
+Avg BMI:                24.4
+Avg SpO2:               97.4%
+% days active:          70%
+% nights healthy sleep: 67%
+% days normal BP:       67%
+
+==> RISK BAND: PREFERRED
+    Reasoning: All tracked metrics within preferred ranges
+
+------------------------------------------------------------------------
+PART 3 — WHY THESE METRICS MOVE AN INSURANCE PRICE
+------------------------------------------------------------------------
+• Resting heart rate (better=lower): Strong cardiovascular mortality predictor; lower = lower risk.
+• Blood pressure (better=lower): Hypertension is a major rating factor.
+• Body mass index (better=range): Obesity correlates with diabetes & heart disease; >35 often substandard.
+• VO2max (fitness) (better=higher): High VO2max is strongly cardioprotective.
+• Daily activity (better=higher): Physical activity lowers all-cause mortality.
+• Sleep duration (better=range): ~7h optimal; <5h sharply raises mortality risk.
+• Heart-rate variability (better=higher): Autonomic health / stress resilience.
+
+Note: values are realistic synthetic samples in the app's generator ranges.
+On a real device, steps/sleep/vitals come from Apple HealthKit. The encryption
+-> Walrus -> Canton-consent pipeline is identical either way.
