@@ -18,6 +18,7 @@ web-build/
 dist/
 .daml/
 sui-anchor/build/
+canton/log/
 
 # Logs
 *.log

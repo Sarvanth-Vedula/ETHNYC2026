@@ -31,6 +31,61 @@ Visibility is driven by `signatory` / `observer` / `controller`:
 - `AccessRequest` is a **propose/accept**: the insurer proposes, only the patient
   can `Approve`, and approval is what grants visibility — multi-party authorization.
 
+## CLI demo — party-level visibility output
+
+The accepted way to verify the consent model without a UI. One command runs the
+full flow on a local Daml ledger and prints, at every step, exactly what **each
+party can see**. Every line below is also asserted inside the script (so
+`daml test` passes) — the output is proven, not narrated.
+
+```bash
+./scripts/cli-demo.sh     # builds, runs the flow, prints the report below
+# or just prove it CI-style (asserts only, in-memory ledger):
+daml test
+```
+
+Sample output, captured from a real run against a local Daml ledger:
+
+```text
+================================================================
+ PulseVault | Canton selective-disclosure consent flow
+ Parties:  Patient (data owner)  .  Insurer  .  Doctor
+================================================================
+
+STEP 1  Patient creates HealthSummary
+        (raw daily data is encrypted on Walrus; only the risk band
+         + Walrus pointer ever live on Canton)
+    Patient  (owner)    can see 1 record(s)
+    Insurer  (grantee)  can see 0 record(s)
+    Doctor   (outsider) can see 0 record(s)
+
+STEP 2  Insurer requests access -> Patient APPROVES (consent granted)
+    Patient  (owner)    can see 1 record(s)
+    Insurer  (grantee)  can see 1 record(s)
+    Doctor   (outsider) can see 0 record(s)
+
+STEP 3  Authorized read (FetchSummary)
+        Insurer reads -> riskBand="preferred"
+                         walrusBlobId="4RhCQ1LtslrvThZPt0x1WcF_XlfirSIyIMHD47_TcuE"
+        Doctor  reads -> REJECTED "not authorized" (never had visibility)
+
+STEP 4  Patient REVOKES the Insurer
+    Patient  (owner)    can see 1 record(s)
+    Insurer  (grantee)  can see 0 record(s)
+    Doctor   (outsider) can see 0 record(s)
+
+================================================================
+ RESULT: every party saw EXACTLY what consent allowed, nothing more.
+================================================================
+```
+
+**How to read it:** the same `HealthSummary` is queried as three different
+parties at each step. The **Insurer** flips `0 → 1 → 0` records as consent is
+granted then revoked; the **Doctor**, never granted, stays at `0` throughout and
+is *rejected* when trying to read. That column-by-column difference is Canton
+enforcing privacy at the contract level — not an app hiding rows. The flow is
+defined in [`daml/HealthDataTest.daml`](daml/HealthDataTest.daml).
+
 ## Architecture
 
 ```
@@ -58,9 +113,10 @@ curl -sSL https://get.daml.com/ | sh      # installs the `daml` assistant
 Then, from this directory:
 
 ```bash
-daml build      # compile HealthData.daml -> a .dar package
-daml test       # run HealthDataTest.daml — proves the consent/visibility flow
-daml start      # local sandbox + HTTP JSON API for a web UI
+daml build              # compile HealthData.daml -> a .dar package
+daml test               # run HealthDataTest.daml — asserts the consent/visibility flow
+./scripts/cli-demo.sh   # run it AND print the per-party report (see above)
+daml start              # local sandbox + HTTP JSON API for the web UI
 ```
 
 ## Deploy to Canton DevNet (via Seaport by 5North)

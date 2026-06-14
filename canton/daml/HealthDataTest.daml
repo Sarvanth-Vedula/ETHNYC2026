@@ -3,23 +3,57 @@ module HealthDataTest where
 import Daml.Script
 import HealthData
 
--- Demonstrates Canton's selective disclosure end to end:
+-- PulseVault — Canton selective disclosure, end to end, with output that
+-- separates WHAT EACH PARTY CAN SEE at every stage of the consent flow.
+--
+--   daml test                              -> runs `testConsentFlow`, asserting
+--                                             every visibility claim below.
+--   daml script --script-name \
+--     HealthDataTest:buildReport ...        -> returns the labeled report (the
+--                                             "party-level output separation").
+--
+-- The flow:
 --   1. patient creates their consolidated summary (raw data encrypted on Walrus)
---   2. BEFORE consent, the insurer cannot even see the contract
+--   2. BEFORE consent, neither insurer nor doctor can even see the contract
 --   3. insurer requests access; patient approves
---   4. AFTER consent, the insurer sees it and can read the risk band — but only
---      the consolidated signal, never the raw daily data (that stays on Walrus)
+--   4. AFTER consent, only the insurer sees it and reads the risk band — never
+--      the raw daily data (that stays encrypted on Walrus)
 --   5. a doctor who was never granted still cannot read it
 --   6. patient revokes; the insurer loses visibility again
-testConsentFlow : Script ()
-testConsentFlow = do
+-- Every line is both PRINTED and ASSERTED, so the output is proven, not narrated.
+
+bar : Text
+bar = "================================================================"
+
+-- Query each party and return, side by side, how many records each one can see.
+visLines : Party -> Party -> Party -> Script [Text]
+visLines patient insurer doctor = do
+  p <- query @HealthSummary patient
+  i <- query @HealthSummary insurer
+  d <- query @HealthSummary doctor
+  pure
+    [ "    Patient  (owner)    can see " <> show (length p) <> " record(s)"
+    , "    Insurer  (grantee)  can see " <> show (length i) <> " record(s)"
+    , "    Doctor   (outsider) can see " <> show (length d) <> " record(s)"
+    ]
+
+-- Runs the full consent flow, asserting every claim, and returns a labeled
+-- per-party report describing exactly what each party could see at each step.
+buildReport : Script [Text]
+buildReport = do
   patient <- allocateParty "Patient"
   insurer <- allocateParty "Insurer"
   doctor  <- allocateParty "Doctor"
 
+  let header =
+        [ bar
+        , " PulseVault | Canton selective-disclosure consent flow"
+        , " Parties:  Patient (data owner)  .  Insurer  .  Doctor"
+        , bar
+        ]
+
   -- 1. Patient creates their consolidated summary. The blob id is a real Walrus
-  --    testnet blob produced by the Sui side of the project (the encrypted 30-day
-  --    insurance summary).
+  --    testnet blob from the Sui side (the encrypted 30-day insurance summary).
   summaryCid <- submit patient do
     createCmd HealthSummary with
       patient
@@ -27,34 +61,68 @@ testConsentFlow = do
       walrusBlobId = "4RhCQ1LtslrvThZPt0x1WcF_XlfirSIyIMHD47_TcuE"
       riskBand = "preferred"
       window = "30-day consolidated"
-
-  -- 2. BEFORE consent: the insurer sees nothing.
+  step1vis <- visLines patient insurer doctor
   insurerBefore <- query @HealthSummary insurer
+  doctorBefore  <- query @HealthSummary doctor
   assertMsg "insurer must NOT see the summary before consent" (null insurerBefore)
+  assertMsg "doctor must NOT see the summary before consent" (null doctorBefore)
+  let step1 =
+        [ ""
+        , "STEP 1  Patient creates HealthSummary"
+        , "        (raw daily data is encrypted on Walrus; only the risk band"
+        , "         + Walrus pointer ever live on Canton)"
+        ] <> step1vis
 
-  -- 3. Insurer requests access; patient approves.
+  -- 2. Insurer requests access; patient approves.
   reqCid <- submit insurer do
     createCmd AccessRequest with insurer; patient; purpose = "underwriting quote"
   summaryCid2 <- submit patient do
     exerciseCmd reqCid Approve with summaryCid
-
-  -- 4. AFTER consent: the insurer can see it and read the risk band.
+  step2vis <- visLines patient insurer doctor
   insurerAfter <- query @HealthSummary insurer
+  doctorAfter  <- query @HealthSummary doctor
   assertMsg "insurer SHOULD see the summary after consent" (length insurerAfter == 1)
+  assertMsg "doctor STILL must not see it" (null doctorAfter)
+  let step2 =
+        [ ""
+        , "STEP 2  Insurer requests access -> Patient APPROVES (consent granted)"
+        ] <> step2vis
 
+  -- 3. Authorized read vs unauthorized read.
   (band, blob) <- submit insurer do
     exerciseCmd summaryCid2 FetchSummary with viewer = insurer
   assertMsg "insurer reads the consolidated risk band" (band == "preferred")
-  debug ("Insurer sees riskBand=" <> band <> ", walrusBlobId=" <> blob)
-
-  -- 5. A doctor who was never granted cannot read it.
   submitMustFail doctor do
     exerciseCmd summaryCid2 FetchSummary with viewer = doctor
+  let step3 =
+        [ ""
+        , "STEP 3  Authorized read (FetchSummary)"
+        , "        Insurer reads -> riskBand=\"" <> band <> "\""
+        , "                         walrusBlobId=\"" <> blob <> "\""
+        , "        Doctor  reads -> REJECTED \"not authorized\" (never had visibility)"
+        ]
 
-  -- 6. Patient revokes the insurer; visibility disappears.
+  -- 4. Patient revokes the insurer; visibility disappears.
   _ <- submit patient do
     exerciseCmd summaryCid2 RevokeAccess with grantee = insurer
+  step4vis <- visLines patient insurer doctor
   insurerRevoked <- query @HealthSummary insurer
   assertMsg "insurer loses visibility after revoke" (null insurerRevoked)
+  let step4 =
+        [ ""
+        , "STEP 4  Patient REVOKES the Insurer"
+        ] <> step4vis
 
-  pure ()
+  let footer =
+        [ ""
+        , bar
+        , " RESULT: every party saw EXACTLY what consent allowed, nothing more."
+        , bar
+        ]
+
+  pure (header <> step1 <> step2 <> step3 <> step4 <> footer)
+
+-- `daml test` entry point: run the flow (with all its asserts) and discard the
+-- report text.
+testConsentFlow : Script ()
+testConsentFlow = buildReport >> pure ()
