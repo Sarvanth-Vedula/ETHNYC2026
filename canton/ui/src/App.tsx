@@ -190,11 +190,12 @@ export function App() {
         <div className="hint">Default is a real Walrus testnet blob. Paste the one your Pulse app produced to use your own.</div>
       </div>
 
-      {/* ── Sui ownership: live Move-contract anchor ───────────────────────── */}
+      {/* ── Sui ownership + Walrus decrypt, side by side ───────────────────── */}
+      <div className="sidebyside">
       <div className="panel">
         <div className="ptitle">⚓ Sui — own the blob on-chain</div>
         <div className="hint">Anchors the Walrus blob in a Move contract → a patient-owned object on Sui.</div>
-        <button className="btn big" onClick={anchorNow} disabled={anchorBusy || !blobInput.trim()}>{anchorBusy ? 'Anchoring on Sui…' : '⚓ Anchor on Sui'}</button>
+        <button className="btn sm" onClick={anchorNow} disabled={anchorBusy || !blobInput.trim()}>{anchorBusy ? 'Anchoring…' : '⚓ Anchor on Sui'}</button>
         {anchorSteps.length > 0 && <div className="steps">{anchorSteps.map((s, i) => <div className="step" key={i}>{s}</div>)}</div>}
         {anchorRes && (
           <div style={{ marginTop: 10 }}>
@@ -209,9 +210,10 @@ export function App() {
       <div className="panel">
         <div className="ptitle">🔓 Walrus — decrypt the summary</div>
         <div className="hint">Fetches the encrypted blob and opens it with the key — on Walrus it’s just ciphertext.</div>
-        <button className="btn big" onClick={demoDecrypt} disabled={demoBusy || !blobInput.trim()}>{demoBusy ? 'Working…' : '🔓 Fetch & decrypt'}</button>
+        <button className="btn sm" onClick={demoDecrypt} disabled={demoBusy || !blobInput.trim()}>{demoBusy ? 'Working…' : '🔓 Fetch & decrypt'}</button>
         {demoSteps.length > 0 && <div className="steps">{demoSteps.map((s, i) => <div className="step" key={i}>{s}</div>)}</div>}
         {demoRead && <Decrypted s={demoRead} />}
+      </div>
       </div>
 
       {/* ── Canton consent ─────────────────────────────────────────────────── */}
