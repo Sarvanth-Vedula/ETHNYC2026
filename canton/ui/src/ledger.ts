@@ -6,7 +6,11 @@
 // doesn't verify the signature) and the Vite proxy forwards /v1 to :7575.
 // For a public DevNet demo, replace mintToken with the JWT your wallet issues.
 
-const PKG = '123f3f464c523cc64180830f86c87128be0c5e442773be8930e1a0446d1b19a7';
+// Package id of the built `pulse-health-consent` DAR. This is a deterministic
+// content hash of the Daml source, so every `daml build`/`daml start` from the
+// same sources produces it — it's stable across machines. If you EDIT any .daml
+// file, re-derive it with:  daml damlc inspect-dar .daml/dist/*.dar | grep main
+const PKG = '1b7d1dcf4b36b23c5143ec80bf7bca6c7fb0cb1c9fe000f99ff28b73f3159c69';
 export const tid = (t: string) => `${PKG}:HealthData:${t}`;
 const LEDGER_ID = 'sandbox';
 const SECRET = 'secret';
