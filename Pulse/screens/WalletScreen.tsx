@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import { colors, spacing, font, radius } from '../constants/theme';
@@ -13,7 +13,8 @@ export default function WalletScreen() {
   const [blobs, setBlobs] = useState<BlobRecord[]>([]);
   const [blobCount, setBlobCount] = useState(0);
   const [insState, setInsState] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
-  const [insResult, setInsResult] = useState<{ blobId: string; riskBand: string; bytes: number } | null>(null);
+  const [insResult, setInsResult] = useState<{ blobId: string; objectId: string; riskBand: string; bytes: number } | null>(null);
+  const [insLog, setInsLog] = useState<string[]>([]);
 
   const loadBlobs = useCallback(async () => {
     const [all, count] = await Promise.all([getAllBlobs(), getBlobCount()]);
@@ -32,14 +33,16 @@ export default function WalletScreen() {
   // Consolidate 30 days, encrypt the summary for the insurer's public key, and
   // store it on Walrus. Only the insurer can decrypt it (see constants/insurance).
   const handleShareInsurance = async () => {
-    setInsState('working');
+    setInsState('working'); setInsLog([]); setInsResult(null);
     try {
       const history = generateMockHealthHistory(30);
+      const log: string[] = [];
       const r = await syncInsuranceSummary(history, DEMO_INSURER_PUBLIC_KEY, {
         windowDays: 30,
         patientRef: 'pulse:demo-patient',
+        onStep: (m) => { log.push(m); setInsLog([...log]); },
       });
-      setInsResult({ blobId: r.blobId, riskBand: r.summary.riskBand, bytes: r.sizeBytes });
+      setInsResult({ blobId: r.blobId, objectId: r.blobObjectId, riskBand: r.summary.riskBand, bytes: r.sizeBytes });
       setInsState('done');
       loadBlobs();
     } catch (e) {
@@ -159,13 +162,23 @@ export default function WalletScreen() {
           <Text style={styles.insIntro}>
             Consolidate 30 days into averages + a risk band, encrypt it for the insurer, and store it on Walrus. The public blob ID reveals nothing — only the insurer can decrypt it.
           </Text>
+          {insLog.length > 0 && (
+            <View style={styles.audit}>
+              {insLog.map((line, i) => (
+                <Text key={i} style={styles.auditLine}>{line}</Text>
+              ))}
+            </View>
+          )}
           {insResult && (
             <View style={styles.blobResult}>
-              <Text style={styles.blobResultLabel}>Risk Band</Text>
-              <Text style={styles.blobResultValue}>{insResult.riskBand}</Text>
-              <Text style={styles.blobResultLabel}>Encrypted Blob ID</Text>
+              <Text style={styles.blobResultLabel}>✓ Walrus acknowledged — blob ID (your receipt)</Text>
               <Text style={styles.blobResultId} numberOfLines={1}>{insResult.blobId}</Text>
-              <Text style={styles.blobResultValue}>Encrypted for insurer · {insResult.bytes} bytes</Text>
+              <Text style={styles.blobResultLabel}>On-chain Blob object (Sui)</Text>
+              <Text style={styles.blobResultId} numberOfLines={1}>{insResult.objectId || '—'}</Text>
+              <Text style={styles.blobResultValue}>{insResult.bytes} bytes · encrypted · risk band {insResult.riskBand}</Text>
+              <TouchableOpacity onPress={() => Linking.openURL(`https://aggregator.walrus-testnet.walrus.space/v1/blobs/${insResult.blobId}`)}>
+                <Text style={styles.auditLink}>↗ Proof: fetch this blob from Walrus yourself</Text>
+              </TouchableOpacity>
             </View>
           )}
           <TouchableOpacity
@@ -282,6 +295,9 @@ const styles = StyleSheet.create({
   blobResultId: { color: colors.accent, fontSize: font.sm, fontFamily: 'monospace', marginBottom: spacing.sm },
   blobResultValue: { color: colors.textSecondary, fontSize: font.sm },
   insIntro: { color: colors.textSecondary, fontSize: font.sm, lineHeight: 19, marginBottom: spacing.md },
+  audit: { backgroundColor: '#0b0b12', borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border },
+  auditLine: { color: colors.textSecondary, fontSize: font.xs, fontFamily: 'monospace', lineHeight: 18 },
+  auditLink: { color: colors.accent, fontSize: font.sm, marginTop: spacing.sm },
   errorBox: { backgroundColor: colors.orangeSoft, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.orange + '44' },
   errorText: { color: colors.orange, fontSize: font.sm },
   syncBtn: { paddingVertical: spacing.md, borderRadius: radius.md, alignItems: 'center' },

@@ -157,14 +157,25 @@ export interface InsuranceSyncResult extends WalrusUploadResult {
 export async function syncInsuranceSummary(
   history: HealthDay[],
   insurerPublicKeyHex: string,
-  options: { windowDays?: number; patientRef?: string; ownerAddress?: string } = {},
+  options: {
+    windowDays?: number;
+    patientRef?: string;
+    ownerAddress?: string;
+    onStep?: (msg: string) => void; // live audit callback
+  } = {},
 ): Promise<InsuranceSyncResult> {
-  const { windowDays = 30, patientRef = 'pulse:anon', ownerAddress } = options;
+  const { windowDays = 30, patientRef = 'pulse:anon', ownerAddress, onStep } = options;
+  const step = (m: string) => onStep?.(m);
 
+  step(`① Reading ${history.length} days of health metrics`);
   const summary = consolidate(history, windowDays);
+  step(`② Consolidated ${windowDays} days → risk band: ${summary.riskBand}`);
   const json = buildInsuranceSummaryJSON(summary, patientRef);
+  step(`③ Encrypting summary for insurer (X25519 + AES-256-GCM)`);
   const envelope = encryptForRecipient(json, insurerPublicKeyHex);
+  step('④ Uploading encrypted blob to Walrus…');
   const upload = await uploadToWalrus(envelopeToBytes(envelope), { ownerAddress });
+  step(`✓ Walrus stored it — ${upload.sizeBytes} bytes`);
 
   return { ...upload, summary };
 }
