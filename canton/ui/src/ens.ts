@@ -1,16 +1,14 @@
-// ENS integration (read-only). ENS lives on Ethereum — for this project the name
-// `pulse.eth` is registered on the Sepolia testnet, so we resolve against Sepolia
-// via a public RPC. No Ethereum deployment, no gas — just live on-chain reads.
-//
-// This is real ENS-specific code (viem's ENS resolution), not RainbowKit.
+// ENS integration (read-only) against Ethereum MAINNET, where real names resolve.
+// No wallet, no network switching, no deployment — just live on-chain reads via a
+// public RPC. This is real ENS-specific code (viem's ENS resolution), not RainbowKit.
 
 import { createPublicClient, http } from 'viem';
-import { sepolia } from 'viem/chains';
+import { mainnet } from 'viem/chains';
 import { normalize } from 'viem/ens';
 
 const client = createPublicClient({
-  chain: sepolia,
-  transport: http('https://ethereum-sepolia-rpc.publicnode.com'),
+  chain: mainnet,
+  transport: http('https://ethereum-rpc.publicnode.com'),
 });
 
 export interface EnsProfile {
@@ -21,7 +19,7 @@ export interface EnsProfile {
   url: string | null;
 }
 
-// Forward resolution + profile records for an ENS name.
+// Forward resolution + profile records for an ENS name (live from mainnet).
 export async function resolveEns(rawName: string): Promise<EnsProfile> {
   const name = normalize(rawName.trim());
   const [address, avatar, description, url] = await Promise.all([

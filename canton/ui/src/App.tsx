@@ -21,7 +21,7 @@ export function App() {
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [blobInput, setBlobInput] = useState('4RhCQ1LtslrvThZPt0x1WcF_XlfirSIyIMHD47_TcuE');
-  const [ensName, setEnsName] = useState('pulse.eth');
+  const [ensName, setEnsName] = useState('vitalik.eth');
   const [ens, setEns] = useState<EnsProfile | null>(null);
   const [ensBusy, setEnsBusy] = useState(false);
   const me = parties ? parties[role] : '';
@@ -61,7 +61,7 @@ export function App() {
     setEnsBusy(true);
     try { setEns(await resolveEns(n)); } catch { setEns(null); } finally { setEnsBusy(false); }
   };
-  useEffect(() => { resolveIdentity('pulse.eth'); }, []);
+  useEffect(() => { resolveIdentity('vitalik.eth'); }, []);
 
   const act = (label: string, fn: () => Promise<any>) => async () => {
     setBusy(label); setErr('');
@@ -144,7 +144,7 @@ export function App() {
               <div className="ensname">{ens.name}</div>
               {ens.address
                 ? <div className="ensaddr mono">{ens.address}</div>
-                : <div className="ensaddr muted">no address record set yet — set it in app.ens.domains (Sepolia)</div>}
+                : <div className="ensaddr muted">no address record set for this name</div>}
               {ens.description && <div className="ensdesc">{ens.description}</div>}
             </div>
           </div>
