@@ -21,7 +21,7 @@ export function App() {
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [blobInput, setBlobInput] = useState('4RhCQ1LtslrvThZPt0x1WcF_XlfirSIyIMHD47_TcuE');
-  const [ensName, setEnsName] = useState('vitalik.eth');
+  const [ensName, setEnsName] = useState('pulse.eth');
   const [ens, setEns] = useState<EnsProfile | null>(null);
   const [ensBusy, setEnsBusy] = useState(false);
   const me = parties ? parties[role] : '';
@@ -61,7 +61,7 @@ export function App() {
     setEnsBusy(true);
     try { setEns(await resolveEns(n)); } catch { setEns(null); } finally { setEnsBusy(false); }
   };
-  useEffect(() => { resolveIdentity('vitalik.eth'); }, []);
+  useEffect(() => { resolveIdentity('pulse.eth'); }, []);
 
   const act = (label: string, fn: () => Promise<any>) => async () => {
     setBusy(label); setErr('');
