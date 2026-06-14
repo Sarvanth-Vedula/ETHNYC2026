@@ -38,9 +38,13 @@ export interface InsuranceSummary {
   riskNotes: string[];
 }
 
-// Step 1: pull the raw (encrypted) blob from the Walrus aggregator.
+// Step 1: pull the raw (encrypted) blob from the Walrus aggregator. The public
+// testnet aggregator allows CORS (access-control-allow-origin: *), so we call it
+// directly — this works both locally and on a hosted (e.g. Vercel) deploy, with
+// no dev proxy needed.
+const WALRUS_AGGREGATOR = 'https://aggregator.walrus-testnet.walrus.space';
 export async function fetchEnvelope(blobId: string): Promise<Envelope> {
-  const res = await fetch(`/walrus/v1/blobs/${blobId}`);
+  const res = await fetch(`${WALRUS_AGGREGATOR}/v1/blobs/${blobId}`);
   if (!res.ok) throw new Error(`Walrus fetch failed (${res.status})`);
   return JSON.parse(await res.text());
 }
