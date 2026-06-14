@@ -1,0 +1,60 @@
+module HealthDataTest where
+
+import Daml.Script
+import HealthData
+
+-- Demonstrates Canton's selective disclosure end to end:
+--   1. patient creates their consolidated summary (raw data encrypted on Walrus)
+--   2. BEFORE consent, the insurer cannot even see the contract
+--   3. insurer requests access; patient approves
+--   4. AFTER consent, the insurer sees it and can read the risk band — but only
+--      the consolidated signal, never the raw daily data (that stays on Walrus)
+--   5. a doctor who was never granted still cannot read it
+--   6. patient revokes; the insurer loses visibility again
+testConsentFlow : Script ()
+testConsentFlow = do
+  patient <- allocateParty "Patient"
+  insurer <- allocateParty "Insurer"
+  doctor  <- allocateParty "Doctor"
+
+  -- 1. Patient creates their consolidated summary. The blob id is a real Walrus
+  --    testnet blob produced by the Sui side of the project (the encrypted 30-day
+  --    insurance summary).
+  summaryCid <- submit patient do
+    createCmd HealthSummary with
+      patient
+      grantees = []
+      walrusBlobId = "4RhCQ1LtslrvThZPt0x1WcF_XlfirSIyIMHD47_TcuE"
+      riskBand = "preferred"
+      window = "30-day consolidated"
+
+  -- 2. BEFORE consent: the insurer sees nothing.
+  insurerBefore <- query @HealthSummary insurer
+  assertMsg "insurer must NOT see the summary before consent" (null insurerBefore)
+
+  -- 3. Insurer requests access; patient approves.
+  reqCid <- submit insurer do
+    createCmd AccessRequest with insurer; patient; purpose = "underwriting quote"
+  summaryCid2 <- submit patient do
+    exerciseCmd reqCid Approve with summaryCid
+
+  -- 4. AFTER consent: the insurer can see it and read the risk band.
+  insurerAfter <- query @HealthSummary insurer
+  assertMsg "insurer SHOULD see the summary after consent" (length insurerAfter == 1)
+
+  (band, blob) <- submit insurer do
+    exerciseCmd summaryCid2 FetchSummary with viewer = insurer
+  assertMsg "insurer reads the consolidated risk band" (band == "preferred")
+  debug ("Insurer sees riskBand=" <> band <> ", walrusBlobId=" <> blob)
+
+  -- 5. A doctor who was never granted cannot read it.
+  submitMustFail doctor do
+    exerciseCmd summaryCid2 FetchSummary with viewer = doctor
+
+  -- 6. Patient revokes the insurer; visibility disappears.
+  _ <- submit patient do
+    exerciseCmd summaryCid2 RevokeAccess with grantee = insurer
+  insurerRevoked <- query @HealthSummary insurer
+  assertMsg "insurer loses visibility after revoke" (null insurerRevoked)
+
+  pure ()

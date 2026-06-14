@@ -1,0 +1,79 @@
+module HealthData where
+
+import DA.List (delete)
+
+-- PulseVault — tokenized, consent-gated health data on Canton.
+--
+-- The raw daily health metrics live ENCRYPTED on Walrus (off-ledger, on the Sui
+-- side of the project). This Canton contract holds only (a) a pointer to that
+-- encrypted blob, and (b) the consolidated risk signal — and it governs WHO is
+-- allowed to see it. This is the part Canton does that a public chain cannot:
+-- a party who is neither the patient nor an approved grantee cannot see this
+-- contract exists at all. The patient is the sole signatory — they alone own and
+-- authorize their health record (self-sovereign data), and selectively disclose
+-- it to specific insurers or doctors. This mirrors the track's "private investor
+-- registry / selective disclosure" pattern: each grantee sees only their own
+-- access; the patient sees the whole picture.
+
+template HealthSummary
+  with
+    patient      : Party     -- owns and authorizes the record
+    grantees     : [Party]    -- insurers / doctors granted read access (the "registry")
+    walrusBlobId : Text       -- pointer to the encrypted consolidated summary on Walrus
+    riskBand     : Text       -- "preferred" | "standard" | "substandard"
+    window       : Text       -- e.g. "30-day consolidated"
+  where
+    signatory patient
+    observer grantees
+    ensure walrusBlobId /= ""
+
+    -- Patient grants a specific party read access (adds them as an observer).
+    -- Observers are derived from contract fields, so granting = archive + recreate
+    -- with the party added; this is the idiomatic Daml way to widen visibility.
+    choice GrantAccess : ContractId HealthSummary
+      with grantee : Party
+      controller patient
+      do
+        assertMsg "already granted" (grantee `notElem` grantees)
+        create this with grantees = grantee :: grantees
+
+    -- Patient revokes a party's access (removes them as an observer).
+    choice RevokeAccess : ContractId HealthSummary
+      with grantee : Party
+      controller patient
+      do create this with grantees = delete grantee grantees
+
+    -- An authorized viewer reads the risk band + Walrus pointer. Nonconsuming so
+    -- it can be read repeatedly. The controller must already be the patient or a
+    -- grantee — otherwise they can't even see this contract to exercise it.
+    nonconsuming choice FetchSummary : (Text, Text)
+      with viewer : Party
+      controller viewer
+      do
+        assertMsg "not authorized" (viewer == patient || viewer `elem` grantees)
+        return (riskBand, walrusBlobId)
+
+-- Insurer-initiated access request (propose / accept). Demonstrates multi-party
+-- authorization: the insurer proposes, but ONLY the patient can approve — and
+-- approval is what grants the insurer visibility into a specific HealthSummary.
+template AccessRequest
+  with
+    insurer : Party
+    patient : Party
+    purpose : Text          -- e.g. "underwriting quote"
+  where
+    signatory insurer
+    observer patient
+
+    choice Approve : ContractId HealthSummary
+      with summaryCid : ContractId HealthSummary
+      controller patient
+      do exercise summaryCid GrantAccess with grantee = insurer
+
+    choice Decline : ()
+      controller patient
+      do return ()
+
+    choice Withdraw : ()
+      controller insurer
+      do return ()
