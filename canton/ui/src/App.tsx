@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import * as L from './ledger';
 import { fetchEnvelope, decryptEnvelope, InsuranceSummary } from './walrusDecrypt';
+import { resolveEns, EnsProfile } from './ens';
 
 type Role = 'Patient' | 'Insurer' | 'Doctor';
 type Parties = Record<Role, string>;
@@ -20,6 +21,9 @@ export function App() {
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [blobInput, setBlobInput] = useState('4RhCQ1LtslrvThZPt0x1WcF_XlfirSIyIMHD47_TcuE');
+  const [ensName, setEnsName] = useState('pulse.eth');
+  const [ens, setEns] = useState<EnsProfile | null>(null);
+  const [ensBusy, setEnsBusy] = useState(false);
   const me = parties ? parties[role] : '';
   const roleLabel = ROLES.find((r) => r.key === role)!.label;
 
@@ -50,6 +54,14 @@ export function App() {
   // Switching party = a fresh view. Clear any decrypted data / steps / errors so
   // one party's results never bleed into another's.
   useEffect(() => { setReads({}); setSteps({}); setErr(''); }, [role]);
+
+  // ENS identity (read-only, live from Sepolia). Resolves on load + on demand.
+  const resolveIdentity = async (n: string) => {
+    if (!n.trim()) return;
+    setEnsBusy(true);
+    try { setEns(await resolveEns(n)); } catch { setEns(null); } finally { setEnsBusy(false); }
+  };
+  useEffect(() => { resolveIdentity('pulse.eth'); }, []);
 
   const act = (label: string, fn: () => Promise<any>) => async () => {
     setBusy(label); setErr('');
@@ -118,6 +130,26 @@ export function App() {
   return (
     <div className="wrap">
       {brand}
+
+      <div className="ens">
+        <div className="enshead">🪪 Identity via ENS</div>
+        <div className="ensrow">
+          <input className="ensinput" value={ensName} onChange={(e) => setEnsName(e.target.value)} placeholder="name.eth" />
+          <button className="btn sm" onClick={() => resolveIdentity(ensName)} disabled={ensBusy}>{ensBusy ? '…' : 'Resolve'}</button>
+        </div>
+        {ens && (
+          <div className="ensresult">
+            {ens.avatar && <img className="ensavatar" src={ens.avatar} alt="" />}
+            <div style={{ minWidth: 0 }}>
+              <div className="ensname">{ens.name}</div>
+              {ens.address
+                ? <div className="ensaddr mono">{ens.address}</div>
+                : <div className="ensaddr muted">no address record set yet — set it in app.ens.domains (Sepolia)</div>}
+              {ens.description && <div className="ensdesc">{ens.description}</div>}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="switch">
         {ROLES.map((r) => (

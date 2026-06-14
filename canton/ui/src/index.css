@@ -26,6 +26,17 @@ body {
 .badge { display: inline-block; margin-top: 14px; font-size: 12px; color: var(--green);
   background: rgba(0,232,143,0.1); border: 1px solid rgba(0,232,143,0.3); padding: 5px 13px; border-radius: 999px; }
 
+.ens { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 18px; }
+.enshead { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.ensrow { display: flex; gap: 8px; }
+.ensinput { flex: 1; padding: 10px 12px; background: var(--card2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: ui-monospace, monospace; font-size: 13px; }
+.ensinput:focus { outline: none; border-color: var(--accent); }
+.ensresult { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.ensavatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+.ensname { font-weight: 700; font-size: 15px; }
+.ensaddr { font-size: 12px; color: var(--accent2); word-break: break-all; }
+.ensdesc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
 .switch { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 22px; }
 .tab { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 8px;
   cursor: pointer; color: var(--muted); text-align: center; transition: all .18s ease; display: flex; flex-direction: column; gap: 3px; }
