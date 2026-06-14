@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "pulse",
+    "slug": "pulse",
+    "scheme": "pulse",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.manojsrinivasa.pulse",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Pulse reads your Apple Health data so you can encrypt it and store it under your own control on Walrus.",
+        "NSHealthUpdateUsageDescription": "Pulse does not write to Apple Health."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": []
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset",
+      "@kingstinct/react-native-healthkit"
+    ]
+  }
+}
